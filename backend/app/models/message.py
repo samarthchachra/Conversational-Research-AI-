@@ -51,5 +51,5 @@ class Message(Base):
 
     conversation = relationship(
         "Conversation",
-        back_populates="message"
+        back_populates="messages"
     )

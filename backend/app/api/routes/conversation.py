@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.orm import Session
 
+from uuid import UUID
+
 from app.database.database import get_db
 
 from app.schemas.chat import (
@@ -11,7 +13,8 @@ from app.schemas.chat import (
 
 from app.schemas.conversation import (
     CreateConversationRequest,
-    ConversationResponse
+    ConversationResponse,
+    UpdateTitleRequest
 )
 
 from app.services.conversation.conversation_service import (
@@ -24,6 +27,8 @@ router = APIRouter(
 )
 
 service = ConversationService()
+
+
 
 @router.post(
     "",
@@ -38,6 +43,38 @@ def create_conversation(
         db=db,
         title=request.title
     )
+
+
+
+@router.delete(
+    "/{conversation_id}"
+)
+def delete_conversation(
+    conversation_id: UUID,
+    db: Session = Depends(get_db)
+):
+
+    return service.delete_conversation(
+        db=db,
+        conversation_id=conversation_id
+    )
+
+
+@router.put(
+    "/{conversation_id}/title"
+)
+def update_title(
+    conversation_id: UUID,
+    request: UpdateTitleRequest,
+    db: Session = Depends(get_db)
+):
+
+    return service.update_title(
+        db=db,
+        conversation_id=conversation_id,
+        title=request.title
+    )
+
 
 @router.post(
     "/chat",
@@ -54,6 +91,8 @@ def chat(
         query=request.query
     )
 
+
+
 @router.get("")
 def list_conversations(
     db: Session = Depends(get_db)
@@ -63,9 +102,11 @@ def list_conversations(
         db=db
     )
 
+
+
 @router.get("/{conversation_id}/messages")
 def get_messages(
-    conversation_id,
+    conversation_id: UUID,
     db: Session = Depends(get_db)
 ):
 

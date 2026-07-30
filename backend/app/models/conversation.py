@@ -32,7 +32,7 @@ class Conversation(Base):
         server_default=func.now()
     )
 
-    message = relationship(
+    messages = relationship(
     "Message",
     back_populates="conversation",
     cascade="all, delete-orphan",

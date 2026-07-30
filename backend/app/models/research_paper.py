@@ -1,8 +1,8 @@
 from sqlalchemy import Column,String,DateTime
-from datetime import datetime
-from sqlalchemy.orm import declarative_base
+from datetime import datetime,timezone
 
-Base = declarative_base()
+from app.database.database import Base
+
 
 class IngestedPaper(Base):
 
@@ -23,5 +23,5 @@ class IngestedPaper(Base):
 
     ingested_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=datetime.now(timezone.utc)
     )

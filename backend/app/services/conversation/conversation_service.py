@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy.orm import Session
-
+from fastapi import HTTPException
 from app.models.enums import MessageRole
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -41,6 +41,16 @@ class ConversationService:
             db=db,
             title=title
         )
+    ###########################################################
+    def delete_conversation(
+        self,
+        db: Session,
+        conversation_id: uuid.UUID
+    ):
+        return self.repository.delete_conversation(
+            db=db,
+            conversation_id=conversation_id
+        )
 
     ###########################################################
 
@@ -53,6 +63,20 @@ class ConversationService:
         return self.repository.get_conversation(
             db=db,
             conversation_id=conversation_id
+        )
+
+    ###########################################################
+
+    def update_title(
+        self,
+        db: Session,
+        conversation_id: uuid.UUID,
+        title: str
+    ):
+        return self.repository.update_title(
+            db=db,
+            conversation_id=conversation_id,
+            title=title
         )
 
     ###########################################################
@@ -95,9 +119,7 @@ class ConversationService:
 
         if conversation is None:
 
-            raise ValueError(
-                "Conversation not found."
-            )
+            raise HTTPException(status_code=404, detail="Conversation not found.")
 
         self.repository.save_message(
             db=db,

@@ -94,7 +94,7 @@ class AdaptiveRagPipeline:
             self.vector_pipeline.ingest(
                 new_documents
             )
-
+            
             print(
                 "\nRetrying Retrieval...\n"
             )
