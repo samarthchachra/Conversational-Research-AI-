@@ -14,10 +14,12 @@ class ConversationRepository:
     def create_conversation(
         self,
         db: Session,
+        user_id: str,
         title: str | None = None
     ):
 
         conversation = Conversation(
+            user_id=user_id,
             title=title
         )
 
@@ -34,19 +36,17 @@ class ConversationRepository:
     def get_conversation(
         self,
         db: Session,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        user_id: str
     ):
 
         return (
-
             db.query(Conversation)
-
             .filter(
-                Conversation.id == conversation_id
+                Conversation.id == conversation_id,
+                Conversation.user_id == user_id
             )
-
             .first()
-
         )
 
     ###########################################################
@@ -106,12 +106,14 @@ class ConversationRepository:
         self,
         db: Session,
         conversation_id: uuid.UUID,
+        user_id: str,
         title: str
     ):
 
         conversation = self.get_conversation(
             db,
-            conversation_id
+            conversation_id,
+            user_id
         )
 
         if conversation is None:
@@ -130,12 +132,14 @@ class ConversationRepository:
     def delete_conversation(
         self,
         db: Session,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        user_id: str
     ):
 
         conversation = self.get_conversation(
             db,
-            conversation_id
+            conversation_id,
+            user_id
         )
 
         if conversation is None:
@@ -151,17 +155,17 @@ class ConversationRepository:
 
     def list_conversations(
         self,
-        db: Session
+        db: Session,
+        user_id: str
     ):
 
         return (
-
             db.query(Conversation)
-
+            .filter(
+                Conversation.user_id == user_id
+            )
             .order_by(
                 Conversation.created_at.desc()
             )
-
             .all()
-
         )

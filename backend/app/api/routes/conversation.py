@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 
 from sqlalchemy.orm import Session
 
@@ -36,11 +36,13 @@ service = ConversationService()
 )
 def create_conversation(
     request: CreateConversationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(...)
 ):
 
     return service.create_conversation(
         db=db,
+        user_id=x_user_id,
         title=request.title
     )
 
@@ -51,12 +53,14 @@ def create_conversation(
 )
 def delete_conversation(
     conversation_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(...)
 ):
 
     return service.delete_conversation(
         db=db,
-        conversation_id=conversation_id
+        conversation_id=conversation_id,
+        user_id=x_user_id
     )
 
 
@@ -66,12 +70,14 @@ def delete_conversation(
 def update_title(
     conversation_id: UUID,
     request: UpdateTitleRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(...)
 ):
 
     return service.update_title(
         db=db,
         conversation_id=conversation_id,
+        user_id=x_user_id,
         title=request.title
     )
 
@@ -82,12 +88,14 @@ def update_title(
 )
 def chat(
     request: ChatRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(...)
 ):
 
     return service.chat(
         db=db,
         conversation_id=request.conversation_id,
+        user_id=x_user_id,
         query=request.query
     )
 
@@ -95,11 +103,13 @@ def chat(
 
 @router.get("")
 def list_conversations(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_user_id: str = Header(...)
 ):
 
     return service.list_conversations(
-        db=db
+        db=db,
+        user_id=x_user_id
     )
 
 

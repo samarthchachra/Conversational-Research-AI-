@@ -22,6 +22,13 @@ class Conversation(Base):
         default=uuid.uuid4
     )
 
+    user_id = Column(
+        String,
+        index=True,
+        default="anonymous",
+        nullable=False
+    )
+
     title = Column(
         String,
         nullable=True

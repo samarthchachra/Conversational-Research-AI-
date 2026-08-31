@@ -34,22 +34,26 @@ class ConversationService:
     def create_conversation(
         self,
         db: Session,
+        user_id: str,
         title: str | None = None
     ):
 
         return self.repository.create_conversation(
             db=db,
+            user_id=user_id,
             title=title
         )
     ###########################################################
     def delete_conversation(
         self,
         db: Session,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        user_id: str
     ):
         return self.repository.delete_conversation(
             db=db,
-            conversation_id=conversation_id
+            conversation_id=conversation_id,
+            user_id=user_id
         )
 
     ###########################################################
@@ -57,12 +61,14 @@ class ConversationService:
     def get_conversation(
         self,
         db: Session,
-        conversation_id: uuid.UUID
+        conversation_id: uuid.UUID,
+        user_id: str
     ):
 
         return self.repository.get_conversation(
             db=db,
-            conversation_id=conversation_id
+            conversation_id=conversation_id,
+            user_id=user_id
         )
 
     ###########################################################
@@ -71,11 +77,13 @@ class ConversationService:
         self,
         db: Session,
         conversation_id: uuid.UUID,
+        user_id: str,
         title: str
     ):
         return self.repository.update_title(
             db=db,
             conversation_id=conversation_id,
+            user_id=user_id,
             title=title
         )
 
@@ -83,11 +91,13 @@ class ConversationService:
 
     def list_conversations(
         self,
-        db: Session
+        db: Session,
+        user_id: str
     ):
 
         return self.repository.list_conversations(
-            db=db
+            db=db,
+            user_id=user_id
         )
 
     ###########################################################
@@ -109,12 +119,14 @@ class ConversationService:
         self,
         db: Session,
         conversation_id: uuid.UUID,
+        user_id: str,
         query: str
     ):
 
         conversation = self.repository.get_conversation(
             db=db,
-            conversation_id=conversation_id
+            conversation_id=conversation_id,
+            user_id=user_id
         )
 
         if conversation is None:
@@ -147,6 +159,7 @@ class ConversationService:
                 self.update_title(
                     db=db,
                     conversation_id=conversation_id,
+                    user_id=user_id,
                     title=new_title
                 )
             except Exception as e:

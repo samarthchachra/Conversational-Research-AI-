@@ -53,10 +53,10 @@ def collection_info() -> CollectionInfo:
     return CollectionInfo(
         collection_name      = COLLECTION_NAME,
         exists               = True,
-        vectors_count        = info.vectors_count,
-        indexed_vectors_count= info.indexed_vectors_count,
-        points_count         = info.points_count,
-        status               = str(info.status),
+        vectors_count        = getattr(info, 'vectors_count', getattr(info, 'points_count', 0)),
+        indexed_vectors_count= getattr(info, 'indexed_vectors_count', getattr(info, 'points_count', 0)),
+        points_count         = getattr(info, 'points_count', 0),
+        status               = str(getattr(info, 'status', 'green')),
     )
 
 
