@@ -2,7 +2,7 @@ class ingestionCondition:
 
     def __init__(
         self,
-        threshold: float = 0.65
+        threshold: float = 0.35
     ):
         self.threshold = threshold
 

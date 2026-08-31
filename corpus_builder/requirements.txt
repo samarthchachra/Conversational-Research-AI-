@@ -1,0 +1,33 @@
+# Offline Corpus Builder + Local API Server dependencies
+# Run: pip install -r corpus_builder/requirements.txt
+# These are NOT installed on Render.
+
+# Local API server
+fastapi==0.141.1
+uvicorn[standard]
+
+
+# PDF extraction (heavy — offline only)
+PyMuPDF>=1.24.0
+
+# Dataset search
+scikit-learn==1.9.0
+
+# Embeddings (full model loading — always-eager in corpus builder)
+sentence-transformers==5.6.0
+
+# LangChain — corpus builder subset
+langchain-core==1.5.3
+langchain-qdrant==1.1.0
+langchain-text-splitters==1.1.2
+
+# Vector store
+qdrant-client==1.18.0
+
+# Database
+SQLAlchemy==2.0.51
+psycopg2
+
+# Utilities
+python-dotenv==1.2.2
+requests==2.34.2

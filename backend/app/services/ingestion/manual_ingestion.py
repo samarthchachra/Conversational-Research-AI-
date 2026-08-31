@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from sqlalchemy.orm import Session
+
 from app.services.ingestion.pdf_ingestion_pipeline import (
     PDFIngestionPipeline
 )
@@ -5,16 +9,20 @@ from app.services.ingestion.pdf_ingestion_pipeline import (
 from app.services.ingestion.vector_ingestion_pipeline import (
     VectorIngestionPipeline
 )
-from app.database.database import get_db
 
-db =next(get_db())
 
 class ManualIngestionService:
+    """Offline ingestion facade — not used in the production request path.
 
-    def __init__(self):
+    This service is intentionally NOT registered on the production FastAPI
+    router. It exists so the ingestion endpoint can be re-enabled locally
+    or moved to the corpus builder CLI.
+    """
+
+    def __init__(self, dataset_directory: str = "research-papers"):
 
         self.pdf_pipeline = PDFIngestionPipeline(
-            dataset_directory="research-papers"
+            dataset_directory=dataset_directory
         )
 
         self.vector_pipeline = VectorIngestionPipeline()
@@ -23,8 +31,9 @@ class ManualIngestionService:
 
     def ingest(
         self,
+        db: Session,
         query: str,
-        top_k: int
+        top_k: int = 20
     ):
 
         documents = self.pdf_pipeline.ingest(

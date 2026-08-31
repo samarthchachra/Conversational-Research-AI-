@@ -35,7 +35,11 @@ class Message(Base):
     )
 
     role = Column(
-        Enum(MessageRole),
+        Enum(
+            MessageRole,
+            name="messagerole",
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False
     )
 

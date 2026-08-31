@@ -1,0 +1,31 @@
+# Production FastAPI backend dependencies
+# These are the ONLY deps installed on Render.
+# Heavy offline/ingestion/local model deps are NOT included here.
+
+# Web framework
+fastapi==0.141.1
+uvicorn[standard]
+
+# LangChain — production subset only
+langchain-core==1.5.3
+langchain-mistralai==1.1.6
+langchain-qdrant==1.1.0
+
+# Reranker (hosted Cohere API)
+cohere
+
+# Query embedding (HF InferenceClient — no local model, zero RAM)
+huggingface_hub
+
+# Vector store client
+qdrant-client==1.18.0
+
+# Database
+SQLAlchemy==2.0.51
+psycopg2
+
+# Utilities
+pydantic==2.13.4
+python-dotenv==1.2.2
+requests==2.34.2
+

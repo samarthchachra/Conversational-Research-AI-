@@ -1,19 +1,20 @@
-from langchain_qdrant import (
-    QdrantVectorStore,
-    FastEmbedSparse,
-    RetrievalMode
-)
+from __future__ import annotations
+
+from dotenv import load_dotenv
+import os
+
+from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
     VectorParams,
-    SparseVectorParams
+    SparseVectorParams,
 )
 
-from langchain_huggingface import HuggingFaceEmbeddings
-
-from qdrant_client import QdrantClient
-import os
-from dotenv import load_dotenv
+from langchain_qdrant import (
+    QdrantVectorStore,
+    FastEmbedSparse,
+    RetrievalMode,
+)
 
 load_dotenv()
 
@@ -24,23 +25,84 @@ URL = os.getenv("QDRANT_URL")
 API_KEY = os.getenv("QDRANT_API_KEY")
 
 
-dense_embedding = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-base-en"
+# Lightweight network client — safe to create at module level.
+client = QdrantClient(
+    url=URL,
+    api_key=API_KEY,
+    check_compatibility=False,
 )
 
+# Sparse embedding is a tiny BM25 tokenizer, not a neural model — fine at module level.
 sparse_embedding = FastEmbedSparse(
     model_name="Qdrant/bm25"
 )
 
-
-client = QdrantClient(
-    url=URL,
-    api_key=API_KEY,
-    check_compatibility=False
-)
+# Dense embedding is lazily initialized so the BGE model is NOT loaded at import time.
+_dense_embedding = None
 
 
-def get_vector_store(mode:RetrievalMode):
+def _get_dense_embedding():
+    """Return the BAAIEmbeddings instance, creating it on the first call.
+
+    The SentenceTransformer model is only loaded when a retrieval or
+    collection-creation operation is actually needed, not at server startup.
+    """
+    global _dense_embedding
+    if _dense_embedding is None:
+        from app.services.vectorstore.embeddingService import BAAIEmbeddings
+        _dense_embedding = BAAIEmbeddings()
+    return _dense_embedding
+
+
+# ---------------------------------------------------------------------------
+# Collection management
+# ---------------------------------------------------------------------------
+
+def create_collection():
+
+    if client.collection_exists(COLLECTION_NAME):
+
+        print(f"{COLLECTION_NAME} already exists")
+
+        return
+
+    print(f"Creating {COLLECTION_NAME}")
+
+    dense = _get_dense_embedding()
+
+    dimension = len(
+        dense.embed_query("test")
+    )
+
+    client.create_collection(
+
+        collection_name=COLLECTION_NAME,
+
+        vectors_config={
+            "": VectorParams(
+                size=dimension,
+                distance=Distance.COSINE,
+            )
+        },
+
+        sparse_vectors_config={
+            "langchain-sparse": SparseVectorParams()
+        },
+    )
+
+    print("Collection created successfully")
+
+
+# ---------------------------------------------------------------------------
+# Vector store access (read / retrieval path)
+# ---------------------------------------------------------------------------
+
+def get_vector_store(
+    mode: RetrievalMode,
+):
+    if not client.collection_exists(COLLECTION_NAME):
+
+        create_collection()
 
     return QdrantVectorStore.from_existing_collection(
 
@@ -50,77 +112,36 @@ def get_vector_store(mode:RetrievalMode):
 
         api_key=API_KEY,
 
-        embedding=dense_embedding,
+        embedding=_get_dense_embedding(),
 
         sparse_embedding=sparse_embedding,
 
         retrieval_mode=mode,
     )
 
-def create_collection():
 
-    collections = client.get_collections()
+# ---------------------------------------------------------------------------
+# Write path (used by the offline corpus builder, not the production API)
+# ---------------------------------------------------------------------------
 
-    existing = {
-        collection.name
-        for collection in collections.collections
-    }
-
-    if COLLECTION_NAME in existing:
-        print(f"{COLLECTION_NAME} already exists")
-        return
-
-    print(f"Creating {COLLECTION_NAME}")
-
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-
-        vectors_config={
-            "": VectorParams(
-                size=768,
-                distance=Distance.COSINE
-            )
-        },
-
-        sparse_vectors_config={
-            "langchain-sparse": SparseVectorParams()
-        }
-    )
-
-    print("Collection created successfully")
-
-def add_documents_to_vector_store(chunks):
+def add_documents_to_vector_store(
+    chunks,
+):
 
     if not client.collection_exists(COLLECTION_NAME):
 
-        print("Creating hybrid collection...")
+        create_collection()
 
-        vector_store = QdrantVectorStore.from_documents(
+    vector_store = get_vector_store(
+        RetrievalMode.HYBRID
+    )
 
-            documents=chunks,
+    vector_store.add_documents(
+        chunks
+    )
 
-            embedding=dense_embedding,
-
-            sparse_embedding=sparse_embedding,
-
-            url=URL,
-
-            api_key = API_KEY,
-
-            collection_name=COLLECTION_NAME,
-
-            retrieval_mode=RetrievalMode.HYBRID,
-
-        )
-
-        print(f"Added {len(chunks)} chunks.")
-
-        return vector_store
-
-    vector_store = get_vector_store(RetrievalMode.HYBRID)
-
-    vector_store.add_documents(chunks)
-
-    print(f"Added {len(chunks)} chunks.")
+    print(
+        f"Added {len(chunks)} chunks."
+    )
 
     return vector_store
