@@ -127,17 +127,11 @@ class PDFPipeline:
         print(f"\nAlready indexed: {len(existing)} | New papers to process: {len(new_papers)}\n")
 
         documents: list[Document] = []
-        ingested: list[dict] = []
 
         for i, paper in enumerate(new_papers, start=1):
             print(f"[{i}/{len(new_papers)}] {paper['title']}")
             doc = self.process_paper(paper)
             if doc is not None:
                 documents.append(doc)
-                ingested.append(paper)
-
-        if ingested:
-            self.repository.bulk_insert(db=db, papers=ingested)
-            print(f"\nRecorded {len(ingested)} new papers in the database.")
 
         return documents

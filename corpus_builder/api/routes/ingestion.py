@@ -80,6 +80,17 @@ def _run_ingestion(job: JobState, request: IngestRequest) -> None:
                         chunks = vector_pipeline.run(documents)
                         qp.chunks_indexed = len(chunks)
 
+                        # Step 3 — record in PostgreSQL ONLY after successful Qdrant indexing
+                        ingested_papers = [
+                            {
+                                "id": doc.metadata["paper_id"],
+                                "title": doc.metadata["title"],
+                                "pdf_url": doc.metadata.get("pdf_url", ""),
+                            }
+                            for doc in documents
+                        ]
+                        pdf_pipeline.repository.bulk_insert(db=db, papers=ingested_papers)
+
                     qp.status = "completed"
 
                 except Exception as exc:

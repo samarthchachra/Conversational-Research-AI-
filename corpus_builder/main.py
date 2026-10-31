@@ -127,6 +127,17 @@ def build_corpus(
             # Step 2: chunk + embed + upsert
             chunks = vector_pipeline.run(documents)
 
+            # Step 3: record in PostgreSQL after successful Qdrant indexing
+            ingested_papers = [
+                {
+                    "id": doc.metadata["paper_id"],
+                    "title": doc.metadata["title"],
+                    "pdf_url": doc.metadata.get("pdf_url", ""),
+                }
+                for doc in documents
+            ]
+            pdf_pipeline.repository.bulk_insert(db=db, papers=ingested_papers)
+
             total_papers += len(documents)
             total_chunks += len(chunks)
 
