@@ -147,7 +147,7 @@ class ConversationService:
         # Auto-generate title if this is the first message in the conversation
         if len(history) == 1:
             try:
-                from app.services.llm.mistral_service import llm
+                from app.services.llm.openrouter_service import llm
                 from langchain_core.messages import SystemMessage, HumanMessage
                 
                 title_messages = [

@@ -1,11 +1,2 @@
-from langchain_mistralai import ChatMistralAI
-from dotenv import load_dotenv
-import os
-load_dotenv()
-
-
-llm = ChatMistralAI(
-    model="mistral-small-latest",
-    temperature=0,
-    api_key=os.getenv("MISTRAL_API_KEY")
-)
+# Backwards-compatibility wrapper redirecting to OpenRouter
+from app.services.llm.openrouter_service import llm

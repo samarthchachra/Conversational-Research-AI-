@@ -1,4 +1,4 @@
-from app.services.llm.mistral_service import llm
+from app.services.llm.openrouter_service import llm
 
 from app.services.generation.prompt_builder import PromptBuilder
 from app.services.generation.citation_resolver import CitationResolver

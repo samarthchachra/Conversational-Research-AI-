@@ -4,7 +4,7 @@ from langchain_core.messages import (
     AIMessage
 )
 
-from app.services.llm.mistral_service import llm
+from app.services.llm.openrouter_service import llm
 
 
 class QueryRewriter:
