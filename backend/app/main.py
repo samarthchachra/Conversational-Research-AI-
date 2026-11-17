@@ -7,7 +7,15 @@ import app.models
 from app.database.database import engine, Base
 from app.services.vectorstore.qdrantService import client as qdrant_client
 
-app = FastAPI(title="Research AI Assisstant")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(
+        bind=engine
+    )
+    print("Database tables verified.")
+    yield
+
+app = FastAPI(title="Research AI Assisstant", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,17 +24,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-
-    Base.metadata.create_all(
-        bind=engine
-    )
-
-    print("Database tables verified.")
-
-    yield
 
 @app.get("/")
 def home():
