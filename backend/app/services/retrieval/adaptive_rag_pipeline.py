@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from langchain_qdrant import RetrievalMode
+from langsmith import traceable
 
 from app.services.retrieval.retriever import Retriever
 from app.services.retrieval.reranker import Reranker
@@ -97,6 +98,7 @@ class AdaptiveRagPipeline:
 
     # ------------------------------------------------------------------
 
+    @traceable(name="rag_pipeline", run_type="chain")
     def invoke(self, query: str) -> dict:
         print("\nRetrieving...\n")
 

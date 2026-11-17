@@ -3,6 +3,7 @@ from langchain_core.messages import (
     SystemMessage,
     AIMessage
 )
+from langsmith import traceable
 
 from app.services.llm.openrouter_service import llm
 
@@ -73,6 +74,7 @@ Rules:
 
     ##########################################################
 
+    @traceable(name="query_rewriter", run_type="chain")
     def rewrite(
         self,
         history,

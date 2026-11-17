@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from langsmith import traceable
 from app.models.enums import MessageRole
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -115,6 +116,7 @@ class ConversationService:
 
     ###########################################################
 
+    @traceable(name="chat", run_type="chain")
     def chat(
         self,
         db: Session,
