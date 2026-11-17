@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import os
 import math
+import requests
+from dotenv import load_dotenv
 from langchain_core.embeddings import Embeddings
 
-MODEL_NAME = "BAAI/bge-base-en-v1.5"
+load_dotenv()
+
+MODEL_NAME = "@cf/baai/bge-base-en-v1.5"
 
 
 def _l2_normalize(vector: list[float]) -> list[float]:
@@ -16,54 +20,63 @@ def _l2_normalize(vector: list[float]) -> list[float]:
 
 
 class BAAIEmbeddings(Embeddings):
-    """Query embedding provider for BAAI/bge-base-en-v1.5 via HuggingFace InferenceClient.
+    """Query embedding provider for BAAI/bge-base-en-v1.5 via Cloudflare Workers AI.
 
-    Uses the official huggingface_hub InferenceClient SDK to call HF Serverless API.
-    Zero PyTorch or local model weights in memory — fits Render Free Tier (512MB limit).
-
-    Set USE_LOCAL_EMBEDDINGS=true to load the model locally (for dev/testing only).
+    Zero local model weights in memory — fits Render Free Tier (512MB limit).
+    Produces 768-dimensional dense vectors identical to BAAI/bge-base-en-v1.5.
     """
 
     def __init__(
         self,
         model_name: str = MODEL_NAME,
         batch_size: int = 32,
+        timeout: int = 30,
     ):
         self.model_name = model_name
         self.batch_size = batch_size
-        self.token = os.getenv("HF_TOKEN")
-        self._client = None   # lazy — populated on first embedding call
-        self._local_model = None
+        self.timeout = timeout
+        self.account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID") or os.getenv("CLOUDFARE_ACCOUNT_ID")
+        self.api_token = (
+            os.getenv("CLOUDFLARE_API_TOKEN")
+            or os.getenv("CLOUDFLARE_API_KEY")
+            or os.getenv("CLOUDFARE_API_KEY")
+            or os.getenv("CLOUDFARE_API_TOKEN")
+        )
 
-    # ------------------------------------------------------------------
-    # HuggingFace InferenceClient (production)
-    # ------------------------------------------------------------------
-
-    def _get_client(self):
-        if self._client is None:
-            from huggingface_hub import InferenceClient
-            self._client = InferenceClient(
-                provider="hf-inference",
-                api_key=self.token,
+    def _get_api_url(self) -> str:
+        if not self.account_id:
+            raise ValueError(
+                "CLOUDFLARE_ACCOUNT_ID is not set. Please set it in your environment or .env file."
             )
-        return self._client
+        return f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model_name}"
 
     def _embed_one(self, text: str) -> list[float]:
-        result = self._get_client().feature_extraction(
-            text,
-            model=self.model_name,
-        )
-        # result is a numpy array of shape (768,) or (N, 768)
-        if hasattr(result, "shape") and len(result.shape) == 2:
-            # Mean pool if token-level (N_tokens, dim)
-            vector = result.mean(axis=0).tolist()
-        else:
-            vector = result.tolist()
-        return _l2_normalize(vector)
+        if not self.api_token:
+            raise ValueError(
+                "CLOUDFLARE_API_TOKEN is not set. Please set it in your environment or .env file."
+            )
 
-    # ------------------------------------------------------------------
-    # LangChain Embeddings interface
-    # ------------------------------------------------------------------
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {"text": [text]}
+
+        response = requests.post(
+            self._get_api_url(),
+            headers=headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("success"):
+            errors = data.get("errors", [])
+            raise RuntimeError(f"Cloudflare Workers AI embedding error: {errors}")
+
+        vector = data["result"]["data"][0]
+        return _l2_normalize(vector)
 
     def embed_query(self, text: str) -> list[float]:
         return self._embed_one(text)
