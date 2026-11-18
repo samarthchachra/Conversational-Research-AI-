@@ -16,18 +16,26 @@ class GenerationService:
 
     def generate(
         self,
-        question,
-        documents
+        question: str,
+        documents: list,
+        has_knowledge_gap: bool = False
     ):
 
         prompt = self.prompt_builder.build_prompt(
-            question,
-            documents
+            question=question,
+            documents=documents,
+            has_knowledge_gap=has_knowledge_gap
         )
 
         response = llm.invoke(
             prompt
         )
+
+        if has_knowledge_gap:
+            return {
+                "answer": response.content,
+                "citations": []
+            }
 
         return self.citation_resolver.resolve(
             answer=response.content,

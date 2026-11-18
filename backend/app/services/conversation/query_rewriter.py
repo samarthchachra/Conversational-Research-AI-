@@ -1,3 +1,7 @@
+import json
+import re
+from typing import Literal, TypedDict
+
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
@@ -7,6 +11,14 @@ from langsmith import traceable
 
 from app.services.llm.openrouter_service import llm
 
+IntentType = Literal["research", "general question"]
+
+
+class RewriteResult(TypedDict):
+    intent: IntentType
+    rewritten_query: str | None  # Standalone search query if research, None if general question
+    reply: str | None            # Direct conversational response if general question, None if research
+
 
 class QueryRewriter:
 
@@ -14,23 +26,26 @@ class QueryRewriter:
 
         self.system_prompt = SystemMessage(
             content="""
-You are an expert query rewriting assistant.
+You are an expert intent classifier and query rewriting assistant for an academic research paper Q&A system.
 
-Your task is to rewrite the user's latest question into a complete standalone query.
+Analyze the user's latest message and conversation history, then output a JSON object with this exact structure:
+{
+  "intent": "research" or "general question",
+  "rewritten_query": "string or null",
+  "reply": "string or null"
+}
 
-Rules:
+Classification Rules:
+1. "general question":
+   - Greetings, goodbyes, compliments, or conversational pleasantries (e.g., "hi", "hello", "thank you", "who are you?").
+   - Off-topic, general knowledge, or common questions not requiring academic research paper citations (e.g., "what is 2+2?", "tell me a joke").
+   - Action: Set "rewritten_query" to null. In "reply", provide a polite, natural response. If asked who you are or what you do, explain that you are an AI research assistant capable of answering questions grounded in academic literature.
 
-1. Use the conversation history for context.
-2. Resolve pronouns like:
-   - it
-   - they
-   - this
-   - these
-   - those
-3. Preserve the original intent.
-4. Do NOT answer the question.
-5. Return ONLY the rewritten query.
-6. If the latest question is already standalone, return it unchanged.
+2. "research":
+   - Technical, scientific, conceptual, or academic questions regarding machine learning, AI, architectures, or papers (e.g., "explain self-attention", "how does LoRA compare to full fine-tuning?").
+   - Action: Set "reply" to null. In "rewritten_query", resolve all pronouns (it, they, this, these) using conversation history into a standalone search query. Do NOT answer the question.
+
+Output format: Return ONLY the JSON object. Do not include markdown code block syntax or extra text.
 """
         )
 
@@ -74,12 +89,44 @@ Rules:
 
     ##########################################################
 
+    def _parse_response(self, text: str, fallback_query: str) -> RewriteResult:
+        """Robustly extract and validate JSON from LLM response."""
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+
+        try:
+            data = json.loads(cleaned)
+            raw_intent = str(data.get("intent", "research")).strip().lower()
+
+            if raw_intent == "general question":
+                return {
+                    "intent": "general question",
+                    "rewritten_query": None,
+                    "reply": data.get("reply") or "Hello! How can I assist you with research papers today?"
+                }
+            else:
+                return {
+                    "intent": "research",
+                    "rewritten_query": data.get("rewritten_query") or fallback_query,
+                    "reply": None
+                }
+        except (json.JSONDecodeError, AttributeError):
+            return {
+                "intent": "research",
+                "rewritten_query": fallback_query,
+                "reply": None
+            }
+
+    ##########################################################
+
     @traceable(name="query_rewriter", run_type="chain")
     def rewrite(
         self,
         history,
         query: str
-    ):
+    ) -> RewriteResult:
 
         messages = self.build_messages(
             history=history,
@@ -90,4 +137,7 @@ Rules:
             messages
         )
 
-        return response.content.strip()
+        return self._parse_response(
+            text=response.content,
+            fallback_query=query
+        )

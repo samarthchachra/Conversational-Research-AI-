@@ -167,18 +167,26 @@ class ConversationService:
             except Exception as e:
                 print(f"Failed to auto-generate title: {e}")
 
-        rewritten_query = self.query_rewriter.rewrite(
-        history=history,
-        query=query
+        rewrite_result = self.query_rewriter.rewrite(
+            history=history,
+            query=query
         )
 
         print(
-        f"\nRewritten Query:\n{rewritten_query}\n"
+            f"\nQuery Intent: {rewrite_result['intent']}\n"
+            f"Rewritten Query: {rewrite_result['rewritten_query']}\n"
         )
 
-        response = self.rag_pipeline.invoke(
-            query=rewritten_query
-        )
+        if rewrite_result["intent"] == "general question":
+            answer = rewrite_result["reply"] or "Hello! I am your AI research assistant. How can I assist you with academic literature today?"
+            response = {
+                "answer": answer,
+                "citations": []
+            }
+        else:
+            response = self.rag_pipeline.invoke(
+                query=rewrite_result["rewritten_query"] or query
+            )
 
         self.repository.save_message(
             db=db,

@@ -104,20 +104,23 @@ class AdaptiveRagPipeline:
 
         documents = self.retrieve(query)
 
+        has_knowledge_gap = self.detector.should_ingest(documents)
+
         # Knowledge gap detection — log only, do NOT ingest at request time.
-        if self.detector.should_ingest(documents):
+        if has_knowledge_gap:
             logger.warning(
                 "Knowledge gap detected for query: %r — "
-                "proceeding with best available context. "
+                "proceeding with fallback explanation. "
                 "Run the corpus builder to index additional papers.",
                 query
             )
             print(
-                "\nKnowledge gap detected — continuing with available context.\n"
+                "\nKnowledge gap detected — using fallback generation.\n"
                 "Tip: run the corpus builder to index more papers for this topic.\n"
             )
 
         return self.generator.generate(
             question=query,
             documents=documents,
+            has_knowledge_gap=has_knowledge_gap
         )
